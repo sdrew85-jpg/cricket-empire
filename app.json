@@ -1,0 +1,7 @@
+{
+  "name": "CricketEmpireNative",
+  "displayName": "Cricket Empire",
+  "ios": {
+    "bundleIdentifier": "com.cricketempire.game"
+  }
+}

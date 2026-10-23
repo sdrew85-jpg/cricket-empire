@@ -1,0 +1,38 @@
+workflows:
+  ios-testflight:
+    name: Cricket Empire iOS TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: cricket_empire_app_store_connect
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.cricketempire.game
+      vars:
+        XCODE_WORKSPACE: ios/CricketEmpireNative.xcworkspace
+        XCODE_SCHEME: CricketEmpireNative
+      node: 22
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Install JavaScript packages
+        script: npm ci
+      - name: Run game tests
+        script: npm test
+      - name: Set unique App Store build number
+        script: cd ios && agvtool new-version -all "$((BUILD_NUMBER + 1))"
+      - name: Install iOS native packages
+        script: cd ios && pod install
+      - name: Apply App Store signing profile
+        script: xcode-project use-profiles
+      - name: Build signed iOS app
+        script: xcode-project build-ipa --workspace "$XCODE_WORKSPACE" --scheme "$XCODE_SCHEME"
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

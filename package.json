@@ -1,0 +1,30 @@
+{
+  "name": "cricket-empire",
+  "version": "0.9.3",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "react-native start",
+    "ios": "react-native run-ios",
+    "web": "node serve-web.mjs",
+    "preview": "node serve-web.mjs",
+    "test": "node --test engine.test.mjs tactics.test.mjs formats.test.mjs management.test.mjs competitions.test.mjs combined.test.mjs v05.test.mjs ratings.test.mjs auction.test.mjs multiformat.test.mjs arcade.test.mjs captaincy.test.mjs conditions.test.mjs club.test.mjs achievements.test.mjs v093.test.mjs career-upgrades.test.mjs"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "react": "19.1.0",
+    "react-native": "0.81.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/preset-env": "^7.25.3",
+    "@babel/runtime": "^7.25.0",
+    "@react-native-community/cli": "20.0.0",
+    "@react-native-community/cli-platform-ios": "20.0.0",
+    "@react-native/babel-preset": "0.81.5",
+    "@react-native/metro-config": "0.81.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
