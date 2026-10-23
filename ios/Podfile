@@ -31,5 +31,21 @@ target 'CricketEmpireNative' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Xcode 26.4+ enforces consteval rules that break React Native 0.81's fmt 11.0.2.
+    # Disable fmt's compile-time format-string validation as a targeted build workaround.
+    fmt_base = File.join(installer.sandbox.root, 'fmt', 'include', 'fmt', 'base.h')
+    if File.exist?(fmt_base)
+      fmt_content = File.read(fmt_base)
+      fmt_patched = fmt_content.gsub(
+        /^(#\s*define\s+FMT_USE_CONSTEVAL)\s+1$/,
+        '\\1 0'
+      )
+      if fmt_patched != fmt_content
+        File.chmod(0644, fmt_base)
+        File.write(fmt_base, fmt_patched)
+        Pod::UI.puts 'Applied Xcode 26 fmt consteval compatibility workaround'.green
+      end
+    end
   end
 end
