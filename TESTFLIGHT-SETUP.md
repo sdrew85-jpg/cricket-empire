@@ -18,15 +18,24 @@ In [App Store Connect](https://appstoreconnect.apple.com/), open **Apps → + �
 
 In App Store Connect, go to **Users and Access → Integrations → App Store Connect API** and create a key with **App Manager** access. Download its `.p8` private key and note the **Issuer ID** and **Key ID**. Apple only allows the private key to be downloaded once.
 
-In Codemagic, open **Team settings → Team integrations → Developer Portal → Manage keys** and add the key. Use the name `cricket_empire_app_store_connect` so it matches the project workflow. Enter the Issuer ID and Key ID, and upload the `.p8` file directly to Codemagic. Do not put the private key in GitHub or send it in chat. [Codemagic’s React Native iOS setup](https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/)
+In Codemagic, open **Team settings → Team integrations → Developer Portal → Manage keys** and add the key. Use the name `cricket_empire_app_store` so it matches the project workflow. Enter the Issuer ID and Key ID, and upload the `.p8` file directly to Codemagic. Do not put the private key in GitHub or send it in chat. [Codemagic’s React Native iOS setup](https://docs.codemagic.io/yaml-quick-start/building-a-react-native-app/)
 
 ## 5. Set up iOS signing in Codemagic
 
 In **Team settings → codemagic.yaml settings → Code signing identities**, create or upload an **Apple Distribution** certificate. Then fetch or upload an **App Store** provisioning profile for `com.cricketempire.game`. The certificate and profile must match the app identifier. The YAML already requests App Store signing and applies the profile before building.
 
-## 6. Connect GitHub and start the build
+## 6. Connect GitHub and enable automatic builds
 
-Publish the project folder from the ZIP to GitHub, then in Codemagic choose **Add application**, connect GitHub, and select the repository. Codemagic reads `codemagic.yaml` from the project root. Select the `ios-testflight` workflow and start a build. It installs packages, runs the game tests, builds the signed iOS app, and uploads it to App Store Connect.
+The repository is `sdrew85-jpg/cricket-empire`, and its default branch is `main`. GitHub hosts the repository. Codemagic runs the `ios-testflight` workflow when code is pushed to `main`; it runs the game tests, signs the iOS app, builds the IPA, and uploads it to TestFlight.
+
+Connect `sdrew85-jpg/cricket-empire` to Codemagic using the GitHub integration, then make sure Codemagic has a webhook in the GitHub repository:
+
+1. In Codemagic, open the Cricket Empire app and select **Webhooks**. Copy the app webhook URL shown there.
+2. In GitHub, open **Settings → Webhooks → Add webhook**. Paste the Codemagic URL, select `application/json`, and enable **Pushes**. Save the webhook.
+3. In Codemagic, confirm the `ios-testflight` workflow appears from the root `codemagic.yaml`. Keep the App Store Connect integration and signing profile configured as described above.
+4. Push or merge a change to `main`. Codemagic runs the tests, then builds and uploads the signed app. Check the build log in Codemagic.
+
+Only pushes to `main` start this TestFlight workflow. Other branches and pull requests do not start a Codemagic iOS build. Codemagic cancels older queued or running push builds when a newer `main` commit arrives.
 
 ## 7. Invite testers
 
@@ -36,7 +45,6 @@ After Apple processes the uploaded build, open the app’s **TestFlight** tab in
 
 - Native React Native iOS project; Expo is not required.
 - App name, icon, Bebas Neue font, and bundle ID.
-- Codemagic workflow for signed TestFlight builds.
-- GitHub Actions workflow for running the game tests.
+- Codemagic automatically builds and uploads to TestFlight after pushes to `main` (once the GitHub webhook, Apple integration, and signing profile are set up).
 
 You still need your Apple Developer membership, App Store Connect app record/API key, code-signing setup, and GitHub/Codemagic connection before the first cloud build can run.
