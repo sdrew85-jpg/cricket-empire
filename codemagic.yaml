@@ -1,6 +1,12 @@
 workflows:
   ios-testflight:
     name: Cricket Empire iOS TestFlight
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+      cancel_previous_builds: true
     max_build_duration: 120
     instance_type: mac_mini_m2
     integrations:
