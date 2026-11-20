@@ -84,6 +84,7 @@ export function applyBall(i,e){if(i.done)return;const bowler=e.bowler??(6+Math.f
  if(legal&&i.balls%6===0)[i.striker,i.non]=[i.non,i.striker];
  if(e.saved)i.fielding[e.fielder].saved+=e.saved;if(e.dropped)i.fielding[e.fielder].drops++;
  const label=wide?`${total}wd`:nb?`${r}+nb`:wicket?'W':extra?`${r}${e.type}`:String(r);
+ for(const old of i.log)delete old.flight;
  i.log.unshift({ball:overs(i.balls),label,text:e.commentary|| (wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'),tactics:e.tactics||null,bowler,fielder:e.fielder??null,flight:e.flight?{...e.flight}:null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
  i.done=i.balls>=i.limit||i.wickets>=(i.limit===6?2:10)||!!(i.target&&i.runs>=i.target);return label;
 }

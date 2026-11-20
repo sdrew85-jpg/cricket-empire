@@ -63,7 +63,7 @@ export function fieldingInterception(preset, target, fielders) {
     if (progress < 0.12 || progress > 0.98) continue;
     const miss = Math.hypot(dx * progress - spotX, dy * progress - spotY);
     const skill = Math.max(8, Math.min(100, fielders[index]?.field ?? 50));
-    const reach = 2.2 + skill / 28 + (preset === 'Defensive' ? 1.2 : 0);
+    const reach = 2.2 + skill / 28 + (preset === 'Defensive' ? 8 : 0);
     if (miss <= reach) candidates.push({ index, spot, progress, miss });
   }
 
