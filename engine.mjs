@@ -1,4 +1,5 @@
 import {COMPETITIONS} from './competitions.mjs';
+import {FIELD_PRESET_SPOTS,fieldingInterception} from './field-placements.mjs';
 import {countryStrength,countrySkillModifiers,countryStartingRating,countryRanking,countryRating,legacyCountrySkillModifiers,legacyCountryStartingRating} from './country-ratings.mjs';
 export {countryStrength,countrySkillModifiers,countryRanking,countryRating} from './country-ratings.mjs';
 export {COMPETITIONS,competitionOf,competitionTitle} from './competitions.mjs';
@@ -83,12 +84,12 @@ export function applyBall(i,e){if(i.done)return;const bowler=e.bowler??(6+Math.f
  if(legal&&i.balls%6===0)[i.striker,i.non]=[i.non,i.striker];
  if(e.saved)i.fielding[e.fielder].saved+=e.saved;if(e.dropped)i.fielding[e.fielder].drops++;
  const label=wide?`${total}wd`:nb?`${r}+nb`:wicket?'W':extra?`${r}${e.type}`:String(r);
- i.log.unshift({ball:overs(i.balls),label,text:e.commentary|| (wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'),tactics:e.tactics||null,bowler,fielder:e.fielder??null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
+ i.log.unshift({ball:overs(i.balls),label,text:e.commentary|| (wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'),tactics:e.tactics||null,bowler,fielder:e.fielder??null,flight:e.flight?{...e.flight}:null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
  i.done=i.balls>=i.limit||i.wickets>=(i.limit===6?2:10)||!!(i.target&&i.runs>=i.target);return label;
 }
 export const TACTICS={batting:['Defensive','Balanced','Aggressive'],bowling:['Contain','Balanced','Attack'],fielding:['Defensive','Balanced','Attacking']};
 export function setTactic(s,kind,value){if(!TACTICS[kind]?.includes(value))throw Error('Invalid tactic');s.tactics??={batting:'Balanced',bowling:'Balanced',fielding:'Balanced'};s.tactics[kind]=value;}
-export function setFieldPreset(s,value){const mapped={Aggressive:'Attacking',Balanced:'Balanced',Defensive:'Defensive'}[value];if(!mapped)throw Error('Choose Aggressive, Balanced or Defensive field placement.');setTactic(s,'fielding',mapped);}
+export function setFieldPreset(s,value){const mapped={Aggressive:'Attacking',Attacking:'Attacking',Balanced:'Balanced',Defensive:'Defensive'}[value];if(!mapped)throw Error('Choose Aggressive, Balanced or Defensive field placement.');setTactic(s,'fielding',mapped);}
 export function chaseForecast(i){if(!i?.target||i.done)return null;const ballsLeft=Math.max(0,(i.limit||0)-(i.balls||0)),runsNeeded=Math.max(0,i.target-(i.runs||0)),currentRate=i.balls?(i.runs*6/i.balls):0,requiredRate=ballsLeft?runsNeeded*6/ballsLeft:Infinity,projected=Math.round((i.runs||0)+(currentRate*(ballsLeft/6)));const difficulty=ballsLeft?runsNeeded/Math.max(1,ballsLeft/6):runsNeeded?99:0;const wicketFactor=Math.max(.25,1-(i.wickets||0)*.065),probability=Math.round(Math.max(1,Math.min(99,(50+(projected-i.target)*1.5)*wicketFactor)));return {runsNeeded,ballsLeft,currentRate,requiredRate,projected,probability};}
 export function eligibleBowlers(s){const i=s.active?.innings.at(-1);if(!i||i.done)return [];const lineup=s.active.lineups?.[i.bowl]||s.teams[i.bowl].xi;const prev=i.lastBowler;return lineup.map((id,pos)=>({id,pos,player:s.active.players?.[i.bowl]?.[pos]||s.teams[i.bowl].players[id]})).filter(x=>(x.player.role==='Bowler'||x.player.role==='All-rounder')&&!x.player.injury?.inMatch&&i.bowling[x.pos].balls<bowlerLimit(s,i)&&x.pos!==prev);}
 export function selectBowler(s,pos){const i=s.active?.innings.at(-1);if(!i||s.active.result||i.bowl!==s.team)throw Error('Select a bowler when your team is bowling.');if(i.balls%6!==0||i.overDeliveries)throw Error('Change the bowler between overs.');if(!eligibleBowlers(s).some(x=>x.pos===pos))throw Error('Bowler unavailable: check consecutive overs and the format bowling limit.');i.selectedBowler=pos;}
@@ -128,9 +129,15 @@ export function delivery(s,i,bp){const m=s.active,batting=s.teams[i.bat],bowling
  // Defensive plans reduce boundary attempts; aggression exchanges dots for boundaries.
  const values=[0,1,2,3,4,6],mass=weights.reduce((n,w)=>n+Math.max(.001,w),0),roll=rng(s)*mass;let cumulative=0;
  e={runs:0};for(let n=0;n<weights.length;n++){cumulative+=Math.max(.001,weights[n]);if(roll<cumulative){e.runs=values[n];break;}}
- const groundSpeed=conditions.outfield==='Slow'?.08:conditions.outfield==='Fast'?.02:0,weatherError=conditions.weather==='Damp'?.06:conditions.weather==='Hot'?.02:0;
- if(e.runs===4&&rng(s)<fielder.field/550+groundSpeed+weatherError+(ft==='Defensive'?.18:0))e={runs:2,fielder:fp,saved:2,commentary:`${fielder.name} cuts it off at the rope. Two runs saved.`};
  }
+ }
+ if(e.wicket==='caught'||e.wicket==='run out'||e.dropped){const spot=FIELD_PRESET_SPOTS[ft]?.[e.fielder]||FIELD_PRESET_SPOTS.Balanced[e.fielder];e.flight={x:spot.x,y:spot.y,lofted:true};}
+ else if(e.wicket==='bowled')e.flight={x:50,y:42};
+ else if(e.runs!==undefined&&!['wd','nb','b','lb'].includes(e.type)){
+  const angle=rng(s)*Math.PI*2,distance=e.runs===6?47:e.runs===4?45:e.runs===3?35:e.runs===2?26:e.runs===1?16:8,target={x:50+Math.cos(angle)*distance,y:50+Math.sin(angle)*distance},fielders=m.players?.[i.bowl]||bowling.players;
+  const interception=e.runs===6?null:fieldingInterception(ft,target,fielders);
+  if(interception){const fielderIndex=interception.index,activeFielder=fielders[fielderIndex];e.fielder=fielderIndex;e.flight={x:interception.spot.x,y:interception.spot.y};if(e.runs===4){const saved=activeFielder.field>=75?2:1;e.runs=4-saved;e.saved=saved;e.commentary=`${activeFielder.name} fields it cleanly and saves ${saved} run${saved===1?'':'s'}.`;}else if(e.runs===0)e.commentary=`${activeFielder.name} fields it cleanly. No run.`;}
+  else e.flight={...target,lofted:e.runs===6};
  }
  return {...e,bowler:bp,tactics:{batting:bt,bowling:bw,fielding:ft}};
 }

@@ -1,5 +1,9 @@
-# Cricket Empire v0.9.4
+# Cricket Empire v0.9.5
 
+
+## v0.9.5 — Fielding placement and internal TestFlight build
+
+Field positions follow cricket presets and can be cycled by tapping the field graphic. Ball trajectories now resolve at a fielder on an interception, saving runs and ending the animation at that position. Only the manager’s live field can be changed. GitHub Actions can upload an Internal Only TestFlight build after repository signing secrets are configured.
 
 ## v0.9.4 — Board, matchday and player depth
 
@@ -12,7 +16,7 @@ Adds a live chase outlook with required rate, projected total and a modelled est
 
 The iOS app uses the React Native CLI and native Xcode project; it does not require Expo. On a Mac, run `npm ci`, then `cd ios && pod install`, and open `ios/CricketEmpireNative.xcworkspace` in Xcode. The displayed app name is Cricket Empire and the bundle identifier is `com.cricketempire.game`. See [TESTFLIGHT-SETUP.md](TESTFLIGHT-SETUP.md) for the full Apple Developer, App Store Connect, signing, and tester invitation guide.
 
-GitHub Actions runs the game tests on pushes and pull requests. Codemagic uses `codemagic.yaml` to install packages, run tests, sign the iOS app, build an IPA, and upload it to TestFlight. Connect the GitHub repository to Codemagic, configure an App Store Connect API key integration named `cricket_empire_app_store`, and upload the Apple distribution certificate and App Store provisioning profile for the bundle identifier. Apple requires an App Store Connect app record before the first automated upload. Change the bundle identifier in both `app.json`/Xcode settings and `codemagic.yaml` if it is already taken in your Apple account.
+GitHub Actions runs the game checks on pushes and pull requests. With the required Apple signing files and App Store Connect API key stored as GitHub Actions secrets, a push to `main` can build and upload an Internal Only TestFlight IPA. Set the repository variable `ENABLE_TESTFLIGHT_DEPLOY=true` to enable that upload. Codemagic push builds are disabled to prevent duplicate uploads. Apple requires an App Store Connect app record before the first upload.
 
 # Cricket Empire v0.9.2
 

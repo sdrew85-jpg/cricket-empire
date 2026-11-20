@@ -1,4 +1,4 @@
-# v0.9.4 implementation notes
+# v0.9.5 implementation notes
 
 - Board objective progress now uses the current season baseline and only recognizes finals participation after qualification. Schema 9 resets current objective progress in every existing save when the app loads its saved slots.
 - The live display uses a classic ground scoreboard treatment. Batting and bowling figures wrap into compact mobile rows so long player names and numeric stats stay visible.
