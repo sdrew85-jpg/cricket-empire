@@ -1,5 +1,9 @@
-# Cricket Empire v0.9.3
+# Cricket Empire v0.9.4
 
+
+## v0.9.4 — Board, matchday and player depth
+
+Board objectives now measure wins earned after the season objectives begin, track actual finals appearances and restart unfinished for every existing save during the schema 9 migration. The match centre and scorecards use a compact vintage ground scoreboard, with mobile-friendly batting and bowling figures that wrap cleanly. Player profiles show career batting, bowling, fielding, recent form, skills, potential and mental attributes. Recent form, player skill and mental ratings, team strength, playing conditions and tactical plans now influence match outcomes. Match previews include a pitch report before the toss; the toss uses a heads/tails call, animated coin flip and a bat-or-bowl decision for the winner.
 ## v0.9.3 — Match insight and custom competitions
 
 Adds a live chase outlook with required rate, projected total and a modelled estimate; ten-appearance player batting form charts; a career record book; end-of-season Player of the Season, leading batter, leading bowler and all-rounder awards; and career milestone announcements. Create a Sydney or Empire custom tournament for 4–10 even-numbered clubs, with single or home-and-away round robins and top-four finals. Field placement now has Aggressive, Balanced and Defensive presets with a graphic that moves 11 fielders to match the selected shape; presets use existing fielding effects in the match engine. Saves migrate to schema 8.
@@ -8,7 +12,7 @@ Adds a live chase outlook with required rate, projected total and a modelled est
 
 The iOS app uses the React Native CLI and native Xcode project; it does not require Expo. On a Mac, run `npm ci`, then `cd ios && pod install`, and open `ios/CricketEmpireNative.xcworkspace` in Xcode. The displayed app name is Cricket Empire and the bundle identifier is `com.cricketempire.game`. See [TESTFLIGHT-SETUP.md](TESTFLIGHT-SETUP.md) for the full Apple Developer, App Store Connect, signing, and tester invitation guide.
 
-GitHub Actions runs the game tests on pushes and pull requests. Codemagic uses `codemagic.yaml` to install packages, run tests, sign the iOS app, build an IPA, and upload it to TestFlight. Connect the GitHub repository to Codemagic, configure an App Store Connect API key integration named `cricket_empire_app_store_connect`, and upload the Apple distribution certificate and App Store provisioning profile for the bundle identifier. Apple requires an App Store Connect app record before the first automated upload. Change the bundle identifier in both `app.json`/Xcode settings and `codemagic.yaml` if it is already taken in your Apple account.
+GitHub Actions runs the game tests on pushes and pull requests. Codemagic uses `codemagic.yaml` to install packages, run tests, sign the iOS app, build an IPA, and upload it to TestFlight. Connect the GitHub repository to Codemagic, configure an App Store Connect API key integration named `cricket_empire_app_store`, and upload the Apple distribution certificate and App Store provisioning profile for the bundle identifier. Apple requires an App Store Connect app record before the first automated upload. Change the bundle identifier in both `app.json`/Xcode settings and `codemagic.yaml` if it is already taken in your Apple account.
 
 # Cricket Empire v0.9.2
 

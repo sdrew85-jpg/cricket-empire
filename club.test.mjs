@@ -21,6 +21,6 @@ test('club facilities and staff appointments spend money and affect the program'
 test('legacy saves migrate and completed seasons settle club accounts',()=>{
  const c=E.createCareer(0,52,'T20','sydney'),raw=E.encode(c),legacy=JSON.parse(raw);legacy.version=5;legacy.career.version=5;
  for(const p of legacy.career.teams[0].players){delete p.leadership;delete p.composure;delete p.tacticalAwareness;delete p.preferredPosition;delete p.wage;}
- delete legacy.career.teams[0].club;const migrated=E.decode(JSON.stringify(legacy));assert.equal(migrated.teams[0].club.balance,500000);assert.ok(migrated.teams[0].players[0].leadership);assert.equal(JSON.parse(E.encode(migrated)).version,8);
+ delete legacy.career.teams[0].club;const migrated=E.decode(JSON.stringify(legacy));assert.equal(migrated.teams[0].club.balance,500000);assert.ok(migrated.teams[0].players[0].leadership);assert.equal(JSON.parse(E.encode(migrated)).version,9);
  for(const f of migrated.fixtures){f.result='completed';f.winner=migrated.team;f.innings=[];}migrated.champion=migrated.team;const balance=migrated.teams[0].club.balance;E.nextSeason(migrated);assert.equal(migrated.season,2);assert.equal(migrated.history[0].clubAccounts.season,1);assert.notEqual(migrated.teams[0].club.balance,balance);assert.equal(migrated.teams[0].club.financeHistory[0].type,'Season accounts');
 });

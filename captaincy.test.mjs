@@ -2,14 +2,13 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import * as E from './engine.mjs';
 
-test('winning the toss allows bat or bowl and survives save/load before choice',()=>{
- let s,tries=0;do{s=E.createCareer(0,++tries);E.startMatch(s,s.fixtures[0],true);}while(s.active.toss!==s.team&&tries<20);
- assert.equal(s.active.tossDecision,null);assert.equal(s.active.innings.length,0);
+test('heads or tails toss and bat or bowl choice survive save/load',()=>{
+ const s=E.createCareer(0,1);E.startMatch(s,s.fixtures[0],true);
+ assert.equal(s.active.toss,null);assert.equal(s.active.tossDecision,null);assert.equal(s.active.innings.length,0);
  const restored=E.decode(E.encode(s));assert.equal(restored.active.tossDecision,null);
- E.chooseTossDecision(restored,'bowl');assert.equal(restored.active.innings[0].bat,restored.active.toss===restored.active.home?restored.active.away:restored.active.home);
- assert.equal(restored.active.tossDecision,'bowl');
- E.finish(restored);E.commit(restored);assert.equal(restored.fixtures[0].tossDecision,'bowl');
- assert.throws(()=>E.chooseTossDecision(restored,'bat'));
+ const outcome=E.chooseTossCall(restored,'heads');assert.ok(['heads','tails'].includes(restored.active.coinResult));
+ if(outcome.won){const beforeChoice=E.decode(E.encode(restored));assert.equal(beforeChoice.active.innings.length,0);E.chooseTossDecision(beforeChoice,'bowl');assert.equal(beforeChoice.active.innings[0].bat,beforeChoice.active.toss===beforeChoice.active.home?beforeChoice.active.away:beforeChoice.active.home);assert.equal(beforeChoice.active.tossDecision,'bowl');E.finish(beforeChoice);E.commit(beforeChoice);assert.equal(beforeChoice.fixtures[0].tossDecision,'bowl');assert.throws(()=>E.chooseTossDecision(beforeChoice,'bat'));}
+ else {assert.equal(restored.active.innings.length,1);assert.ok(['bat','bowl'].includes(restored.active.tossDecision));}
 });
 test('format squads and leadership stay independent and are used in matches',()=>{
  const s=E.createCareer(0,27,'ALL','sydney'),t=s.teams[s.team],t20=[...E.teamXI(s,s.team,'T20')],odi=[...E.teamXI(s,s.team,'ODI')];
@@ -33,5 +32,5 @@ test('selection guidance recommends a balanced format-specific XI and includes r
 test('v0.9.1 all-format saves gain independent default squads when loaded',()=>{
  const s=E.createCareer(0,31,'ALL','empire');for(const t of s.teams)delete t.formatSquads;const legacy={format:'cricket-empire',version:6,career:{...s,version:6}},restored=E.decode(JSON.stringify(legacy));
  assert.ok(restored.teams.every(t=>['T20','ODI','FC'].every(f=>E.validateXI({...t,xi:t.formatSquads[f].xi}))));
- assert.equal(JSON.parse(E.encode(restored)).version,8);
+ assert.equal(JSON.parse(E.encode(restored)).version,9);
 });
