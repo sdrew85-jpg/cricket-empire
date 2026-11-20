@@ -122,7 +122,7 @@ React Native game for web and iOS. This release adds player contracts, recruitme
 
 ## Play
 
-From this folder, run `npm ci` and `npm start` to start the React Native Metro bundler. iOS simulator builds require macOS and Xcode; TestFlight builds run on Codemagic.
+From this folder, run `npm ci` and `npm start` to start the React Native Metro bundler. iOS simulator builds require macOS and Xcode; GitHub Actions handles automated TestFlight builds.
 
 For the already exported web build run `python -m http.server 8083 --bind 127.0.0.1 --directory dist`, then open http://127.0.0.1:8083. Retain the same browser origin for the local career save.
 
