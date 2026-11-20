@@ -1,6 +1,6 @@
 # Apple TestFlight setup
 
-This guide takes Cricket Empire from the project ZIP to an iPhone build in TestFlight. The app is set to version **0.9.3** and bundle ID **`com.cricketempire.game`**.
+This guide takes Cricket Empire from the project ZIP to an iPhone build in TestFlight. The app is set to version **0.9.4** and bundle ID **`com.cricketempire.game`**.
 
 ## 1. Join Apple Developer Program
 
@@ -26,7 +26,7 @@ In **Team settings → codemagic.yaml settings → Code signing identities**, cr
 
 ## 6. Connect GitHub and enable automatic builds
 
-The repository is `sdrew85-jpg/cricket-empire`, and its default branch is `main`. GitHub hosts the repository. Codemagic runs the `ios-testflight` workflow when code is pushed to `main`; it runs the game tests, signs the iOS app, builds the IPA, and uploads it to TestFlight.
+The repository is `sdrew85-jpg/cricket-empire`, and its default branch is `main`. GitHub hosts the repository. Codemagic runs the `ios-testflight` workflow when code is pushed to `main`; it runs the game tests, signs the iOS app, builds the IPA, and uploads it to TestFlight for internal testing only. It does not submit builds for external beta review.
 
 Connect `sdrew85-jpg/cricket-empire` to Codemagic using the GitHub integration, then make sure Codemagic has a webhook in the GitHub repository:
 
@@ -39,12 +39,12 @@ Only pushes to `main` start this TestFlight workflow. Other branches and pull re
 
 ## 7. Invite testers
 
-After Apple processes the uploaded build, open the app’s **TestFlight** tab in App Store Connect. Complete the beta test information and any export-compliance questions Apple shows. Add internal testers from your App Store Connect team, or create an external tester group and invite people by email or public link. Apple allows up to 100 internal testers; the first build sent to external testers goes through TestFlight App Review. Testers install Apple’s free TestFlight app on their iPhones and accept your invitation. [Apple’s TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/)
+After Apple processes the uploaded build, open the app’s **TestFlight** tab in App Store Connect and add the build to an internal testing group. Internal testers must be App Store Connect users with access to your app. Builds are marked **Internal Only** and are not submitted for external beta review. Testers install Apple’s free TestFlight app on their iPhones and accept your invitation. [Apple’s TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/)
 
 ## What is already configured
 
 - Native React Native iOS project; Expo is not required.
 - App name, icon, Bebas Neue font, and bundle ID.
-- Codemagic automatically builds and uploads to TestFlight after pushes to `main` (once the GitHub webhook, Apple integration, and signing profile are set up).
+- Codemagic automatically builds and uploads internal-only TestFlight builds after pushes to `main` (once the GitHub webhook, Apple integration, and signing profile are set up).
 
 You still need your Apple Developer membership, App Store Connect app record/API key, code-signing setup, and GitHub/Codemagic connection before the first cloud build can run.
