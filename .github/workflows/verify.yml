@@ -51,10 +51,16 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -A -f pkcs12 -k "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
           security default-keychain -d user -s "$KEYCHAIN_PATH"
+          IDENTITY_OUTPUT="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")"
+          printf '%s\n' "$IDENTITY_OUTPUT"
+          if ! printf '%s\n' "$IDENTITY_OUTPUT" | grep -Eq '[1-9][0-9]* valid identities found' || ! printf '%s\n' "$IDENTITY_OUTPUT" | grep -Fq 'CSW5L49AW8'; then
+            echo "No valid Apple signing identity for the Cricket Empire team was imported."
+            exit 1
+          fi
           security cms -D -i "$PROFILE_PATH" > "$RUNNER_TEMP/profile.plist"
           PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/profile.plist")"
           PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/profile.plist")"
