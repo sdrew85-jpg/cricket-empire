@@ -122,7 +122,7 @@ jobs:
             --skip_waiting_for_build_processing true
       - uses: actions/upload-artifact@v4
         with:
-          name: Cricket-Empire-v0.9.5-IPA
+          name: Cricket-Empire-v0.9.6-IPA
           path: ${{ runner.temp }}/export/*.ipa
           if-no-files-found: error
           retention-days: 14
