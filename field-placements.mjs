@@ -1,4 +1,4 @@
-export const FIELD_PRESET_ORDER = ['Attacking', 'Balanced', 'Defensive'];
+export const FIELD_PRESET_ORDER = ['Attacking', 'Powerplay', 'Balanced', 'Defensive', 'Boundary'];
 
 export const FIELD_PRESET_SPOTS = {
   Attacking: [
@@ -13,6 +13,19 @@ export const FIELD_PRESET_SPOTS = {
     { label: 'SQ', x: 79, y: 56 },
     { label: 'FL', x: 69, y: 73 },
     { label: 'SC', x: 25, y: 34 },
+  ],
+  Powerplay: [
+    { label: 'WK', x: 50, y: 82 },
+    { label: 'SL', x: 43, y: 62 },
+    { label: 'PT', x: 27, y: 44 },
+    { label: 'CV', x: 37, y: 33 },
+    { label: 'MO', x: 46, y: 25 },
+    { label: 'MI', x: 55, y: 25 },
+    { label: 'MW', x: 68, y: 42 },
+    { label: 'SQ', x: 74, y: 55 },
+    { label: 'FL', x: 21, y: 78 },
+    { label: 'DC', x: 31, y: 68 },
+    { label: 'LO', x: 80, y: 77 },
   ],
   Balanced: [
     { label: 'WK', x: 50, y: 82 },
@@ -40,6 +53,19 @@ export const FIELD_PRESET_SPOTS = {
     { label: 'LF', x: 10, y: 56 },
     { label: 'LO', x: 90, y: 48 },
   ],
+  Boundary: [
+    { label: 'WK', x: 50, y: 82 },
+    { label: 'SL', x: 40, y: 61 },
+    { label: 'PT', x: 10, y: 39 },
+    { label: 'CV', x: 22, y: 15 },
+    { label: 'MO', x: 48, y: 9 },
+    { label: 'MI', x: 52, y: 9 },
+    { label: 'MW', x: 78, y: 15 },
+    { label: 'SQ', x: 91, y: 39 },
+    { label: 'FL', x: 88, y: 79 },
+    { label: 'DC', x: 13, y: 78 },
+    { label: 'LO', x: 72, y: 90 },
+  ],
 };
 
 export function nextFieldPreset(current) {
@@ -63,7 +89,7 @@ export function fieldingInterception(preset, target, fielders) {
     if (progress < 0.12 || progress > 0.98) continue;
     const miss = Math.hypot(dx * progress - spotX, dy * progress - spotY);
     const skill = Math.max(8, Math.min(100, fielders[index]?.field ?? 50));
-    const reach = 2.2 + skill / 28 + (preset === 'Defensive' ? 8 : 0);
+    const reach = 2.2 + skill / 28 + (preset === 'Defensive' || preset === 'Boundary' ? 8 : 0);
     if (miss <= reach) candidates.push({ index, spot, progress, miss });
   }
 
