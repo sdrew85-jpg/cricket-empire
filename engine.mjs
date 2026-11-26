@@ -93,7 +93,7 @@ export function applyBall(i,e){if(i.done)return;const bowler=e.bowler??(6+Math.f
  if(e.saved)i.fielding[e.fielder].saved+=e.saved;if(e.dropped)i.fielding[e.fielder].drops++;
  const label=wide?`${total}wd`:nb?`${r}+nb`:wicket?'W':extra?`${r}${e.type}`:String(r);
  for(const old of i.log)delete old.flight;
- i.log.unshift({ball:overs(i.balls),bowlingEnd:e.bowlingEnd||i.bowlingEnd||'top',label,text:e.commentary||(wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'),ln:e.ln??null,lg:e.lg??null,ph:e.ph??null,tactics:e.tactics||null,bowler,fielder:e.fielder??null,flight:e.flight?{...e.flight}:null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
+ i.log.unshift({ball:overs(i.balls),bowlingEnd:e.bowlingEnd||i.bowlingEnd||'top',label,text:e.commentary||(wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'),dl:e.dl??null,tactics:e.tactics||null,bowler,fielder:e.fielder??null,flight:e.flight?{...e.flight}:null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
  i.done=i.balls>=i.limit||i.wickets>=(i.limit===6?2:10)||!!(i.target&&i.runs>=i.target);return label;
 }
 export const TACTICS={batting:['Defensive','Balanced','Aggressive'],bowling:['Contain','Balanced','Attack'],fielding:['Attacking','Powerplay','Balanced','Defensive','Boundary']};
@@ -107,6 +107,7 @@ export function takeNewBall(s){const m=s.active,i=m?.innings.at(-1);if(!m||!i||s
 export const DELIVERY_LINES=['Off stump','Top of off','Middle and leg','Outside off'];
 export const DELIVERY_LENGTHS=['Yorker','Good length','Full','Short'];
 export const MATCH_PHASES=['Powerplay','Middle overs','Death overs','Session play'];
+export function deliveryDescription(code){return Number.isInteger(code)&&code>=0&&code<16?DELIVERY_LENGTHS[code%4]+' · '+DELIVERY_LINES[Math.floor(code/4)]:null;}
 export function matchPhase(s,i=s.active?.innings.at(-1)){const format=i?.format||s?.active?.format||s?.format||'T20';if(!i)return 'Pre-match';if(format==='FC')return 'Session play';const progress=(i.balls||0)/Math.max(1,i.limit||1),powerplay=format==='ODI' ? .2 : .3,death=format==='ODI' ? .8 : .75;return progress<powerplay?'Powerplay':progress>=death?'Death overs':'Middle overs';}
 export function effectiveTactics(s,i=s.active?.innings.at(-1)){
  if(!i)return s.tactics;
@@ -152,7 +153,7 @@ export function delivery(s,i,bp){const m=s.active,batting=s.teams[i.bat],bowling
   if(interception){const fielderIndex=interception.index,activeFielder=fielders[fielderIndex];e.fielder=fielderIndex;e.flight={x:interception.spot.x,y:interception.spot.y};if(e.runs===4){const saved=activeFielder.field>=75?2:1;e.runs=4-saved;e.saved=saved;e.commentary=`${activeFielder.name} fields it cleanly and saves ${saved} run${saved===1?'':'s'}.`;}else if(e.runs===0)e.commentary=`${activeFielder.name} fields it cleanly. No run.`;}
   else e.flight={...target,lofted:e.runs===6};
  }
- return {...e,bowler:bp,ln:lineIndex,lg:lengthIndex,ph:phaseIndex,tactics:{batting:bt,bowling:bw,fielding:ft}};
+ return {...e,bowler:bp,dl:lineIndex*4+lengthIndex,tactics:{batting:bt,bowling:bw,fielding:ft}};
 }
 export function step(s){const m=s.active;if(!m||m.result)return;const i=m.innings.at(-1);if(s.format==='FC'&&(i.bowl!==s.team||m.autoManageBall)&&i.ball?.age>=480&&i.balls%6===0&&!i.overDeliveries){i.ball.age=0;i.ball.changes++;i.pendingNote='The fielding captain takes the new ball after 80 overs.';}let bp=i.selectedBowler;
  if(bp===undefined){const options=eligibleBowlers(s).sort((a,b)=>i.bowling[a.pos].balls-i.bowling[b.pos].balls||b.player.bowl-a.player.bowl);bp=options[0]?.pos;if(bp===undefined)throw Error('No eligible bowler.');i.selectedBowler=bp;}
