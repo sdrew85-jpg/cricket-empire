@@ -93,7 +93,7 @@ export function applyBall(i,e){if(i.done)return;const bowler=e.bowler??(6+Math.f
  if(e.saved)i.fielding[e.fielder].saved+=e.saved;if(e.dropped)i.fielding[e.fielder].drops++;
  const label=wide?`${total}wd`:nb?`${r}+nb`:wicket?'W':extra?`${r}${e.type}`:String(r);
  for(const old of i.log)delete old.flight;
- i.log.unshift({ball:overs(i.balls),bowlingEnd:e.bowlingEnd||i.bowlingEnd||'top',label,text:e.commentary|| (wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'),tactics:e.tactics||null,bowler,fielder:e.fielder??null,flight:e.flight?{...e.flight}:null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
+ i.log.unshift({ball:overs(i.balls),bowlingEnd:e.bowlingEnd||i.bowlingEnd||'top',label,text:(e.commentary||(wide?'Wide. Another delivery required.':nb?(i.format==='FC'?'No ball. One penalty run.':'No ball! Free hit follows.'):wicket?`Wicket! ${e.wicket}.`:r===6?'SIX! Launched over the rope.':r===4?'FOUR! Finds the gap beautifully.':r?`${r} run${r>1?'s':''}. The batters keep moving.`:'Dot ball. No way through.'))+(e.length&&e.line?` ${e.length} on ${e.line}.`:'')+(e.context?' '+e.context:''),line:e.line||null,length:e.length||null,phase:e.phase||null,conditions:e.conditions||null,tactics:e.tactics||null,bowler,fielder:e.fielder??null,flight:e.flight?{...e.flight}:null});if(i.pendingNote){i.log[0].text+=` ${i.pendingNote}`;delete i.pendingNote;}
  i.done=i.balls>=i.limit||i.wickets>=(i.limit===6?2:10)||!!(i.target&&i.runs>=i.target);return label;
 }
 export const TACTICS={batting:['Defensive','Balanced','Aggressive'],bowling:['Contain','Balanced','Attack'],fielding:['Attacking','Powerplay','Balanced','Defensive','Boundary']};
@@ -104,11 +104,12 @@ export function eligibleBowlers(s){const i=s.active?.innings.at(-1);if(!i||i.don
 export function selectBowler(s,pos){const i=s.active?.innings.at(-1);if(!i||s.active.result||i.bowl!==s.team)throw Error('Select a bowler when your team is bowling.');if(i.balls%6!==0||i.overDeliveries)throw Error('Change the bowler between overs.');if(!eligibleBowlers(s).some(x=>x.pos===pos))throw Error('Bowler unavailable: check consecutive overs and the format bowling limit.');i.selectedBowler=pos;}
 export function takeNewBall(s){const m=s.active,i=m?.innings.at(-1);if(!m||!i||s.format!=='FC'||i.bowl!==s.team||i.ball.age<480||i.balls%6!==0||i.overDeliveries)throw Error('The red ball is available after 80 overs, between overs, while your team is bowling.');i.ball.age=0;i.ball.changes++;i.pendingNote='The captain takes the new ball after 80 overs.';}
 
+export function matchPhase(s,i=s.active?.innings.at(-1)){const format=i?.format||s?.active?.format||s?.format||'T20';if(!i)return 'Pre-match';if(format==='FC')return 'Session play';const progress=(i.balls||0)/Math.max(1,i.limit||1),powerplay=format==='ODI' ? .2 : .3,death=format==='ODI' ? .8 : .75;return progress<powerplay?'Powerplay':progress>=death?'Death overs':'Middle overs';}
 export function effectiveTactics(s,i=s.active?.innings.at(-1)){
  if(!i)return s.tactics;
- const left=i.limit-i.balls,required=i.target&&left>0?(i.target-i.runs)*6/left:0;
- const aiBat=s.format==='FC'?'Balanced':i.wickets>=7&&left>30?'Defensive':required>8||i.balls/i.limit>=.8?'Aggressive':'Balanced';
- const aiBowl=i.wickets>=7?'Attack':s.format!=='FC'&&i.balls/i.limit>=.8?'Contain':'Balanced';
+ const left=i.limit-i.balls,required=i.target&&left>0?(i.target-i.runs)*6/left:0,phase=matchPhase(s,i);
+ const aiBat=s.format==='FC'?'Balanced':i.wickets>=7&&left>30?'Defensive':required>8||phase==='Powerplay'||phase==='Death overs'?'Aggressive':'Balanced';
+ const aiBowl=i.wickets>=7?'Attack':phase==='Death overs'?'Contain':phase==='Powerplay'?'Attack':'Balanced';
  return {batting:i.bat===s.team?s.tactics.batting:aiBat,bowling:i.bowl===s.team?s.tactics.bowling:aiBowl,fielding:i.bowl===s.team?s.tactics.fielding:aiBowl==='Attack'?'Attacking':aiBowl==='Contain'?'Defensive':'Balanced'};
 }
 export function swapXI(s,position,reserve,format=s.viewFormat||s.format||'T20'){if(s.active)throw Error('Finish the current match before changing your XI.');const t=s.teams[s.team],current=teamXI(s,s.team,format);if(!Number.isInteger(position)||position<0||position>10||!Number.isInteger(reserve)||!t.players[reserve]||current.includes(reserve))throw Error('Choose a position and a reserve.');const xi=[...current];xi[position]=reserve;setFormatXI(s,format,xi);}
@@ -118,20 +119,20 @@ export function worldRankings(s,format=s.format){if(s.competition!=='world')retu
 function rankResult(s,f){if(s.competition!=='world')return;const rows=setupWorld(s).ratings[f.format||s.format],a=rows[f.home],b=rows[f.away],score=f.winner===null?.5:f.winner===a.id?1:0,delta=24*(score-1/(1+10**((b.rating-a.rating)/400)));a.rating+=delta;b.rating-=delta;for(const r of [a,b]){r.played++;r.wins+=f.winner===r.id?1:0;r.draws+=f.winner===null?1:0;}}
 
 export function delivery(s,i,bp){const m=s.active,batting=s.teams[i.bat],bowling=s.teams[i.bowl],bat=m.players?.[i.bat]?.[i.striker]||batting.players[(m.lineups?.[i.bat]||batting.xi)[i.striker]],bowl=m.players?.[i.bowl]?.[bp]||bowling.players[(m.lineups?.[i.bowl]||bowling.xi)[bp]];
- const plan=effectiveTactics(s,i),bt=plan.batting,bw=plan.bowling,ft=plan.fielding;
+ const plan=effectiveTactics(s,i),bt=plan.batting,bw=plan.bowling,ft=plan.fielding,phaseName=matchPhase(s,i);
  const aggression=bt==='Aggressive'?1:bt==='Defensive'?-1:0,attack=bw==='Attack'?1:bw==='Contain'?-1:0,close=ft==='Attacking'?1:ft==='Powerplay' ? .5 : ft==='Defensive'||ft==='Boundary'?-1:0;
  const fp=Math.floor(rng(s)*11),fielder=m.players?.[i.bowl]?.[fp]||bowling.players[(m.lineups?.[i.bowl]||bowling.xi)[fp]],x=rng(s);let e;
- const activeBowlingSkill=Math.max(8,bowl.bowl*(1-(bowl.injury?.severity||0))-(bowl.fatigue||0)*.12),wide=.014+(100-activeBowlingSkill)/7000+(attack===1?.009:0),noBall=.006+(100-activeBowlingSkill)/14000;
+ const activeBowlingSkill=Math.max(8,bowl.bowl*(1-(bowl.injury?.severity||0))-(bowl.fatigue||0)*.12),line=['Off stump','Top of off','Middle and leg','Outside off'][Math.floor(rng(s)*4)],lengthRoll=rng(s),length=lengthRoll<(.1+activeBowlingSkill/1000)?'Yorker':lengthRoll<(.20+activeBowlingSkill/200)?'Good length':lengthRoll<.72?'Full':'Short',lineEdge=(line==='Off stump'||line==='Top of off') ? .002 : -.001,lengthEdge=length==='Good length' ? .004 : length==='Yorker' ? .002 : length==='Short' ? -.002 : 0,phaseAttack=phaseName==='Death overs'&&bw==='Attack' ? .006 : phaseName==='Powerplay'&&bw==='Attack' ? .003 : 0,wide=.014+(100-activeBowlingSkill)/7000+(attack===1?.009:0),noBall=.006+(100-activeBowlingSkill)/14000;
  if(x<wide)e={type:'wd'};else if(x<wide+noBall)e={type:'nb',runs:rng(s)<.4?1:0};else if(x<wide+noBall+.012)e={type:rng(s)<.5?'b':'lb',runs:1};else {
  const base=s.format==='FC'?.020:s.format==='ODI'?.034:.057,conditions=m.conditions||{},ball=i.ball||{age:0},fatigueBowl=bowl.fatigue||0,fatigueBat=bat.fatigue||0,bowlSkill=Math.max(8,bowl.bowl*(1-(bowl.injury?.severity||0))-fatigueBowl*.12),batSkill=Math.max(8,bat.bat*(1-(bat.injury?.severity||0))-fatigueBat*.08),ballWear=Math.max(.35,1-ball.age/480),pitchBoost={Green:.012,Balanced:.003,Dry:.008,Slow:.006}[conditions.pitch]||0,weatherBoost={Clear:0,Overcast:.012,Hot:-.005,Humid:.006,Damp:-.008}[conditions.weather]||0;
  const batMental=((bat.confidence||50)-50)*.00012+((bat.composure||50)-50)*.00008+((bat.morale||50)-50)*.0001,bowlMental=((bowl.confidence||50)-50)*.00008+((bowl.tacticalAwareness||50)-50)*.00006+((bowl.morale||50)-50)*.00006,teamBat=(m.players?.[i.bat]||[]).map(p=>p.bat).sort((a,b)=>b-a).slice(0,7).reduce((a,b)=>a+b,0)/7,teamBowl=(m.players?.[i.bowl]||[]).map(p=>p.bowl).sort((a,b)=>b-a).slice(0,5).reduce((a,b)=>a+b,0)/5,oppositionEdge=Math.max(-.012,Math.min(.012,(teamBowl-teamBat)/2500));
- const wicketChance=Math.max(.006,Math.min(.16,base+(bowlSkill-batSkill)/2000+aggression*.017+attack*.012+close*.006+oppositionEdge+bowlMental-batMental+(pitchBoost+weatherBoost)*ballWear));
+ const wicketChance=Math.max(.006,Math.min(.16,base+(bowlSkill-batSkill)/2000+aggression*.017+attack*.012+close*.006+oppositionEdge+bowlMental-batMental+(pitchBoost+weatherBoost)*ballWear+lineEdge+lengthEdge+phaseAttack));
  if(rng(s)<wicketChance&&!i.free){const kind=rng(s);if(kind<.1){if(rng(s)<.25+fielder.field*.006)e={wicket:'run out',fielder:fp};else e={runs:1};}else if(kind<.65){if(rng(s)<Math.min(.98,.22+fielder.field*.007+close*.07))e={wicket:'caught',fielder:fp,commentary:`Caught by ${fielder.name}! Safe hands in the field.`};else e={runs:1,fielder:fp,dropped:true,commentary:`Dropped by ${fielder.name}! One run taken.`};}else e={wicket:'bowled'};}
  else {
  const weights=s.format==='FC'?[.68,.20,.04,.005,.07,.005]:s.format==='ODI'?[.50,.32,.07,.01,.085,.015]:[.40,.32,.10,.01,.13,.04];
- const limited=s.format!=='FC',phase=limited?(i.balls/i.limit>=.8?.025:i.balls/i.limit<.3?.008:0):0;
+ const limited=s.format!=='FC',phase=limited?(phaseName==='Death overs' ? .025 : phaseName==='Powerplay' ? .008 : 0):0,phasePlan=phaseName==='Death overs'?(bw==='Attack' ? .012 : bw==='Contain' ? -.012 : 0):phaseName==='Powerplay'&&bw==='Attack' ? .006 : 0;
  const strategyQuality=Math.max(-.012,Math.min(.012,((bat.tacticalAwareness||50)-(bowl.tacticalAwareness||50))/4000)),oppositionBatEdge=Math.max(-.018,Math.min(.018,(teamBat-teamBowl)/2200));
- const shift=Math.max(-.09,Math.min(.12,(batSkill-bowlSkill)/1600+aggression*.045+attack*.012+close*.015+phase+strategyQuality+oppositionBatEdge+batMental-bowlMental));
+ const shift=Math.max(-.09,Math.min(.12,(batSkill-bowlSkill)/1600+aggression*.045+attack*.012+close*.015+phase+phasePlan+lineEdge+strategyQuality+oppositionBatEdge+batMental-bowlMental));
  weights[0]-=shift;weights[4]+=shift*.7;weights[5]+=shift*.3;
  const surfaceResistance={Green:.02,Balanced:0,Dry:.01,Slow:.035}[conditions.pitch]||0;weights[0]+=surfaceResistance;weights[4]-=surfaceResistance;
  const outfield=conditions.outfield==='Fast'?.025:conditions.outfield==='Slow'?-.035:0;weights[0]-=outfield;weights[4]+=outfield;
@@ -148,7 +149,7 @@ export function delivery(s,i,bp){const m=s.active,batting=s.teams[i.bat],bowling
   if(interception){const fielderIndex=interception.index,activeFielder=fielders[fielderIndex];e.fielder=fielderIndex;e.flight={x:interception.spot.x,y:interception.spot.y};if(e.runs===4){const saved=activeFielder.field>=75?2:1;e.runs=4-saved;e.saved=saved;e.commentary=`${activeFielder.name} fields it cleanly and saves ${saved} run${saved===1?'':'s'}.`;}else if(e.runs===0)e.commentary=`${activeFielder.name} fields it cleanly. No run.`;}
   else e.flight={...target,lofted:e.runs===6};
  }
- return {...e,bowler:bp,tactics:{batting:bt,bowling:bw,fielding:ft}};
+ const context=m.conditions?.weather==='Overcast'?'Overcast air may help seam movement.':m.conditions?.pitch==='Dry'?'The dry pitch may grip and turn.':m.conditions?.outfield==='Fast'&&e.runs>=4?'The fast outfield carries it to the rope.':'';return {...e,bowler:bp,line,length,phase:phaseName,context,conditions:{weather:m.conditions?.weather,pitch:m.conditions?.pitch,outfield:m.conditions?.outfield},tactics:{batting:bt,bowling:bw,fielding:ft}};
 }
 export function step(s){const m=s.active;if(!m||m.result)return;const i=m.innings.at(-1);if(s.format==='FC'&&(i.bowl!==s.team||m.autoManageBall)&&i.ball?.age>=480&&i.balls%6===0&&!i.overDeliveries){i.ball.age=0;i.ball.changes++;i.pendingNote='The fielding captain takes the new ball after 80 overs.';}let bp=i.selectedBowler;
  if(bp===undefined){const options=eligibleBowlers(s).sort((a,b)=>i.bowling[a.pos].balls-i.bowling[b.pos].balls||b.player.bowl-a.player.bowl);bp=options[0]?.pos;if(bp===undefined)throw Error('No eligible bowler.');i.selectedBowler=bp;}
