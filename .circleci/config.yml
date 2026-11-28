@@ -1,0 +1,166 @@
+version: 2.1
+
+jobs:
+  game-tests:
+    docker:
+      - image: cimg/node:22.16
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-v1-{{ checksum "package-lock.json" }}
+            - npm-v1-
+      - run:
+          name: Install dependencies
+          command: npm ci
+      - save_cache:
+          key: npm-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+      - run:
+          name: Run game tests
+          command: npm test
+
+  ios-testflight:
+    macos:
+      xcode: 16.4.0
+    resource_class: m4pro.medium
+    working_directory: ~/project
+    steps:
+      - checkout
+      - run:
+          name: Install Node.js 22
+          command: |
+            brew install node@22
+            brew link --overwrite --force node@22
+            node --version
+            npm --version
+      - restore_cache:
+          keys:
+            - ios-npm-v1-{{ checksum "package-lock.json" }}
+            - ios-npm-v1-
+      - run:
+          name: Install JavaScript dependencies
+          command: npm ci
+      - save_cache:
+          key: ios-npm-v1-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+      - restore_cache:
+          keys:
+            - pods-v1-{{ checksum "ios/Podfile.lock" }}
+            - pods-v1-
+      - run:
+          name: Install iOS packages
+          command: cd ios && pod install --repo-update
+      - save_cache:
+          key: pods-v1-{{ checksum "ios/Podfile.lock" }}
+          paths:
+            - ios/Pods
+      - run:
+          name: Increment iOS build number
+          command: cd ios && xcrun agvtool new-version -all "$CIRCLE_BUILD_NUM"
+      - run:
+          name: Import Apple signing assets
+          command: |
+            set -euo pipefail
+            for secret in IOS_DISTRIBUTION_CERTIFICATE_BASE64 IOS_DISTRIBUTION_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 APP_STORE_CONNECT_API_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_API_KEY_P8; do
+              if [[ -z "${!secret:-}" ]]; then
+                echo "Missing CircleCI project environment variable: $secret"
+                exit 1
+              fi
+            done
+            CERTIFICATE_PATH="$HOME/distribution.p12"
+            PROFILE_PATH="$HOME/profile.mobileprovision"
+            KEYCHAIN_PATH="$HOME/cricket-empire.keychain-db"
+            KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+            printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
+            printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+            security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+            security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security import "$CERTIFICATE_PATH" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -A -f pkcs12 -k "$KEYCHAIN_PATH"
+            security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+            security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+            security default-keychain -d user -s "$KEYCHAIN_PATH"
+            IDENTITY_OUTPUT="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH")"
+            printf '%s\n' "$IDENTITY_OUTPUT"
+            if ! printf '%s\n' "$IDENTITY_OUTPUT" | grep -Eq '[1-9][0-9]* valid identities found' || ! printf '%s\n' "$IDENTITY_OUTPUT" | grep -Fq 'CSW5L49AW8'; then
+              echo "No valid Apple signing identity for the Cricket Empire team was imported."
+              exit 1
+            fi
+            security cms -D -i "$PROFILE_PATH" > "$HOME/profile.plist"
+            PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print UUID' "$HOME/profile.plist")"
+            PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print Name' "$HOME/profile.plist")"
+            mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+            cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+            echo "export PROFILE_NAME='$PROFILE_NAME'" >> "$BASH_ENV"
+      - run:
+          name: Archive signed iOS app
+          command: |
+            mkdir -p ios-build
+            xcodebuild -workspace ios/CricketEmpireNative.xcworkspace \
+              -scheme CricketEmpireNative \
+              -configuration Release \
+              -destination 'generic/platform=iOS' \
+              -archivePath "$PWD/ios-build/CricketEmpire.xcarchive" \
+              DEVELOPMENT_TEAM=CSW5L49AW8 \
+              CODE_SIGN_STYLE=Manual \
+              CODE_SIGN_IDENTITY='Apple Distribution' \
+              PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME" \
+              archive
+      - run:
+          name: Export internal-only TestFlight IPA
+          command: |
+            mkdir -p ios-build/export
+            cat > "$HOME/ExportOptions.plist" <<PLIST
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0"><dict>
+            <key>method</key><string>app-store</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>CSW5L49AW8</string>
+            <key>testFlightInternalTestingOnly</key><true/>
+            <key>provisioningProfiles</key><dict>
+            <key>com.cricketempire.game</key><string>$PROFILE_NAME</string>
+            </dict></dict></plist>
+            PLIST
+            xcodebuild -exportArchive \
+              -archivePath "$PWD/ios-build/CricketEmpire.xcarchive" \
+              -exportPath "$PWD/ios-build/export" \
+              -exportOptionsPlist "$HOME/ExportOptions.plist"
+            IPA_PATH="$(find ios-build/export -maxdepth 1 -name '*.ipa' -print -quit)"
+            test -n "$IPA_PATH"
+            cp "$IPA_PATH" ios-build/Cricket-Empire.ipa
+      - run:
+          name: Upload to TestFlight (internal only)
+          command: |
+            set -euo pipefail
+            mkdir -p "$HOME/.appstoreconnect/private_keys"
+            printf '%s' "$APP_STORE_CONNECT_API_KEY_P8" > "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+            jq -n --arg key_id "$APP_STORE_CONNECT_API_KEY_ID" \
+              --arg issuer_id "$APP_STORE_CONNECT_ISSUER_ID" \
+              --arg key "$APP_STORE_CONNECT_API_KEY_P8" \
+              '{key_id:$key_id, issuer_id:$issuer_id, key:$key, in_house:false}' \
+              > "$HOME/app-store-connect-api-key.json"
+            gem install fastlane --no-document
+            fastlane pilot upload \
+              --ipa ios-build/Cricket-Empire.ipa \
+              --api_key_path "$HOME/app-store-connect-api-key.json" \
+              --skip_submission true \
+              --skip_waiting_for_build_processing true
+      - store_artifacts:
+          path: ios-build/Cricket-Empire.ipa
+          destination: Cricket-Empire-v0.9.9-IPA
+
+workflows:
+  verify-and-distribute:
+    jobs:
+      - game-tests
+      - ios-testflight:
+          requires:
+            - game-tests
+          filters:
+            branches:
+              only: main
