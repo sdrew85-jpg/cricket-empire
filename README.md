@@ -3,7 +3,7 @@
 
 ## v0.9.5 — Fielding placement and internal TestFlight build
 
-Field positions follow cricket presets and can be cycled by tapping the field graphic. Ball trajectories now resolve at a fielder on an interception, saving runs and ending the animation at that position. Only the manager’s live field can be changed. GitHub Actions can upload an Internal Only TestFlight build after repository signing secrets are configured.
+Field positions follow cricket presets and can be cycled by tapping the field graphic. Ball trajectories now resolve at a fielder on an interception, saving runs and ending the animation at that position. Only the manager’s live field can be changed. CircleCI runs the game test suite and can upload an Internal Only TestFlight build after project setup.
 
 ## v0.9.4 — Board, matchday and player depth
 
@@ -16,7 +16,7 @@ Adds a live chase outlook with required rate, projected total and a modelled est
 
 The iOS app uses the React Native CLI and native Xcode project; it does not require Expo. On a Mac, run `npm ci`, then `cd ios && pod install`, and open `ios/CricketEmpireNative.xcworkspace` in Xcode. The displayed app name is Cricket Empire and the bundle identifier is `com.cricketempire.game`. See [TESTFLIGHT-SETUP.md](TESTFLIGHT-SETUP.md) for the full Apple Developer, App Store Connect, signing, and tester invitation guide.
 
-GitHub Actions runs the game checks on pushes and pull requests. With the required Apple signing files and App Store Connect API key stored as GitHub Actions secrets, a push to `main` can build and upload an Internal Only TestFlight IPA. Set the repository variable `ENABLE_TESTFLIGHT_DEPLOY=true` to enable that upload. Codemagic push builds are disabled to prevent duplicate uploads. Apple requires an App Store Connect app record before the first upload.
+CircleCI runs `npm test` for pushes and pull requests, then builds and uploads an Internal Only TestFlight IPA for pushes to `main`. The pipeline is in `.circleci/config.yml`. To activate it, follow the `sdrew85-jpg/cricket-empire` project in CircleCI and add these project environment variables under Project Settings → Environment Variables: `IOS_DISTRIBUTION_CERTIFICATE_BASE64`, `IOS_DISTRIBUTION_CERTIFICATE_PASSWORD`, `IOS_PROVISIONING_PROFILE_BASE64`, `APP_STORE_CONNECT_API_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID`, and `APP_STORE_CONNECT_API_KEY_P8`. Copy the existing values from GitHub Actions secrets; they are not automatically transferred. Keep the secrets in CircleCI, not in the repository. Apple requires an App Store Connect app record before the first upload.
 
 # Cricket Empire v0.9.2
 
